@@ -19,18 +19,42 @@ class AutoAgentPage extends \Opencart\System\Engine\Controller {
         $this->response->setOutput($this->load->view('extension/module/auto_agent_page', $data));
     }
 
+    // 👇 Veritabanına yazmaz, sadece sonucu döner
     public function generate(): void {
         $this->load->model('catalog/product');
-        $this->load->model('extension/module/auto_agent');
 
         $product_id = (int)$this->request->post['product_id'];
         $product_info = $this->model_catalog_product->getProduct($product_id);
 
-        if ($product_info) {
-            $this->model_extension_module_auto_agent->generateDescription($product_info);
-            $this->response->setOutput(json_encode(['success' => 'Description generated successfully!']));
-        } else {
+        if (!$product_info) {
             $this->response->setOutput(json_encode(['error' => 'Product not found.']));
+            return;
         }
+
+        $api_url = $this->config->get('module_auto_agent_api_url');
+        $api_key = $this->config->get('module_auto_agent_api_key');
+
+        if (!$api_url || !$api_key) {
+            $this->response->setOutput(json_encode(['error' => 'API settings are missing.']));
+            return;
+        }
+
+        $prompt = "Write an SEO-friendly product description for: " . $product_info['name'];
+
+        $ch = curl_init($api_url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $api_key,
+            'Content-Type: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['prompt' => $prompt]));
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        $data = json_decode($response, true);
+        $description = $data['text'] ?? 'No description returned.';
+
+        // ✅ Veritabanına yazmıyoruz, sadece önizleme olarak döndür
+        $this->response->setOutput(json_encode(['success' => true, 'description' => $description]));
     }
 }
