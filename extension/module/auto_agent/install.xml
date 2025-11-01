@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<modification>
+    <name>Auto Agent Description Generator</name>
+    <code>auto_agent</code>
+    <version>1.0</version>
+    <author>Tayfun Kilinç</author>
+    <link></link>
+
+    <file path="catalog/model/catalog/product.php">
+        <operation>
+            <search><![CDATA[$this->event->trigger('catalog/model/catalog/product/addProduct/after', [&$product_id]);]]></search>
+            <add position="after"><![CDATA[
+        $this->load->model('extension/module/auto_agent');
+        $this->model_extension_module_auto_agent->generateDescription($data);
+      ]]></add>
+        </operation>
+    </file>
+</modification>
